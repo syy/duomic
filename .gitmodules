@@ -1,0 +1,3 @@
+[submodule "Driver/libASPL"]
+	path = Driver/libASPL
+	url = https://github.com/gavv/libASPL.git
