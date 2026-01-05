@@ -165,6 +165,24 @@ channel = 1
 
 ## Troubleshooting
 
+> **Note**: The driver runs at the system level. If you experience unexpected issues, restarting the audio service or your computer usually resolves them.
+
+### No audio after installation
+
+If you completed setup but apps don't receive audio from virtual mics:
+
+```bash
+# 1. Quit duomic CLI first (press q or Ctrl+C)
+
+# 2. Restart the audio service
+sudo killall coreaudiod
+
+# 3. Start duomic again
+duomic
+```
+
+If the issue persists, try restarting your computer.
+
 ### Driver not visible in Audio MIDI Setup
 
 ```bash
@@ -193,6 +211,14 @@ duomic status
 - Ensure no other apps are using the USB mic exclusively
 - Try increasing buffer size in your DAW
 - Check `duomic run -vvv` for underrun warnings
+
+### Virtual mics not showing in apps
+
+Some apps cache the audio device list. Try:
+
+1. Quit and reopen the app (Zoom, Discord, etc.)
+2. Check System Settings → Sound → Input for the virtual mics
+3. If still missing, restart coreaudiod: `sudo killall coreaudiod`
 
 ## Keyboard Shortcuts
 
