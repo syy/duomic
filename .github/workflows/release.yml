@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  MACOS_MIN_VERSION: "12.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Fetch submodule tags
+        run: |
+          cd Driver/libASPL
+          git fetch --tags --force origin
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Import Certificates
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 -k "$KEYCHAIN_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          rm certificate.p12
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build Universal CLI
+        run: |
+          cd cli
+          cargo build --release --target x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
+
+          mkdir -p ../dist
+          lipo -create \
+            target/x86_64-apple-darwin/release/duomic \
+            target/aarch64-apple-darwin/release/duomic \
+            -output ../dist/duomic
+
+      - name: Build Universal Driver
+        env:
+          CODESIGN_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+        run: |
+          cd Driver/duomicDriver
+          mkdir -p build && cd build
+          cmake .. \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.MACOS_MIN_VERSION }} \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCODESIGN_ID="$CODESIGN_ID"
+          make -j4
+
+          cp -R duomicDriver.driver ../../../dist/
+
+      - name: Sign CLI
+        env:
+          CODESIGN_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+        run: |
+          codesign --force --sign "$CODESIGN_ID" --options runtime dist/duomic
+
+      - name: Create PKG
+        env:
+          CODESIGN_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+          INSTALLER_CODESIGN_ID: ${{ secrets.APPLE_INSTALLER_ID }}
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+          # Create payload directories
+          mkdir -p pkg-root/driver pkg-root/cli
+          cp -R dist/duomicDriver.driver pkg-root/driver/
+          cp dist/duomic pkg-root/cli/
+
+          # Build component packages
+          pkgbuild --root pkg-root/driver \
+            --identifier com.duomic.driver \
+            --version "$VERSION" \
+            --install-location /Library/Audio/Plug-Ins/HAL \
+            --scripts scripts/driver \
+            driver.pkg
+
+          pkgbuild --root pkg-root/cli \
+            --identifier com.duomic.cli \
+            --version "$VERSION" \
+            --install-location /usr/local/bin \
+            cli.pkg
+
+          # Create distribution
+          cat > distribution.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <installer-gui-script minSpecVersion="2">
+              <title>duomic</title>
+              <organization>com.duomic</organization>
+              <domains enable_localSystem="true"/>
+              <options customize="never" require-scripts="true" rootVolumeOnly="true"/>
+              <pkg-ref id="com.duomic.driver"/>
+              <pkg-ref id="com.duomic.cli"/>
+              <choices-outline>
+                  <line choice="default">
+                      <line choice="com.duomic.driver"/>
+                      <line choice="com.duomic.cli"/>
+                  </line>
+              </choices-outline>
+              <choice id="default"/>
+              <choice id="com.duomic.driver" visible="false">
+                  <pkg-ref id="com.duomic.driver"/>
+              </choice>
+              <choice id="com.duomic.cli" visible="false">
+                  <pkg-ref id="com.duomic.cli"/>
+              </choice>
+              <pkg-ref id="com.duomic.driver" version="$VERSION">driver.pkg</pkg-ref>
+              <pkg-ref id="com.duomic.cli" version="$VERSION">cli.pkg</pkg-ref>
+          </installer-gui-script>
+          EOF
+
+          # Build product archive
+          productbuild --distribution distribution.xml \
+            --package-path . \
+            duomic-unsigned.pkg
+
+          # Sign installer
+          productsign --sign "$INSTALLER_CODESIGN_ID" \
+            duomic-unsigned.pkg \
+            "duomic-$VERSION.pkg"
+
+      - name: Notarize
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+          xcrun notarytool submit "duomic-$VERSION.pkg" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait
+
+          xcrun stapler staple "duomic-$VERSION.pkg"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: duomic-${{ steps.version.outputs.VERSION }}.pkg
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

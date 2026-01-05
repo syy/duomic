@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust-checks:
+    name: Rust Checks
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            cli/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('cli/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path cli/Cargo.toml -- --check
+
+      - name: Clippy
+        run: cargo clippy --manifest-path cli/Cargo.toml -- -D warnings
+
+      - name: Build
+        run: cargo build --manifest-path cli/Cargo.toml --release
+
+      - name: Test
+        run: cargo test --manifest-path cli/Cargo.toml
+
+  driver-build:
+    name: Build Driver
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Fetch submodule tags
+        run: |
+          cd Driver/libASPL
+          git fetch --tags --force
+
+      - name: Build Driver (Universal Binary)
+        run: |
+          cd Driver/duomicDriver
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+                   -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          make -j4
+
+      - name: Verify Universal Binary
+        run: |
+          lipo -info Driver/duomicDriver/build/duomicDriver.driver/Contents/MacOS/duomicDriver
