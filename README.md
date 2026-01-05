@@ -1,6 +1,8 @@
-# duomic
+# Duomic
 
 Split your stereo USB microphone into separate virtual microphones on macOS.
+
+> **Note**: This project is in early development. It installs a system-level audio driver which requires administrator privileges. While tested on macOS 12-15, unexpected issues may occur. Use at your own discretion. See [Troubleshooting](#troubleshooting) if you encounter problems.
 
 **duomic** creates virtual audio devices from individual channels of a multi-channel USB microphone. Perfect for podcasters, streamers, and audio professionals who need independent control over each channel.
 
@@ -18,11 +20,10 @@ Split your stereo USB microphone into separate virtual microphones on macOS.
 
 ## Installation
 
-### Homebrew (Recommended)
+### Quick Install (Recommended)
 
 ```bash
-brew tap syy/duomic
-brew install --cask duomic
+curl -fsSL https://raw.githubusercontent.com/syy/duomic/main/install-remote.sh | bash
 ```
 
 ### Manual Installation
