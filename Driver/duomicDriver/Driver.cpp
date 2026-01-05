@@ -146,6 +146,9 @@ public:
         void* bytes,
         UInt32 bytesCount) override
     {
+        // Try to connect to shared memory (idempotent - returns immediately if already connected)
+        g_sharedBuffer.connect();
+
         SInt16* samples = static_cast<SInt16*>(bytes);
         UInt32 numSamples = bytesCount / sizeof(SInt16) / ChannelCount;
 
