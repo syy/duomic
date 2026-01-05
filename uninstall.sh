@@ -36,6 +36,7 @@ fi
 echo "Cleaning up IPC files..."
 rm -f /tmp/duomic.sock 2>/dev/null || true
 rm -f /tmp/duomic_audio 2>/dev/null || true
+rm -f /tmp/duomic_config 2>/dev/null || true
 
 # Ask about config
 CONFIG_PATH="$HOME/.config/duomic"

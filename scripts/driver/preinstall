@@ -20,4 +20,9 @@ if [ -d "$OLD_DRIVER" ]; then
     rm -rf "$OLD_DRIVER"
 fi
 
+# Clean up old IPC files for fresh start
+rm -f /tmp/duomic.sock 2>/dev/null || true
+rm -f /tmp/duomic_audio 2>/dev/null || true
+rm -f /tmp/duomic_config 2>/dev/null || true
+
 exit 0
