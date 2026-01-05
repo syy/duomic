@@ -16,7 +16,7 @@ set(CODESIGN_ID "" CACHE STRING "Codesign ID")
 
 # Driver configuration
 set(DRIVER_NAME "duomicDriver")
-set(DRIVER_VERSION "0.1.0")
+set(DRIVER_VERSION "0.1.1")
 set(DRIVER_COPYRIGHT "Copyright (c) 2026 Safa Yasin YILDIRIM")
 set(DRIVER_IDENTIFIER "com.duomic.driver")
 set(DRIVER_UID "D8F3E251-4B7A-4C9E-8F1D-2A3B4C5D6E7F")
