@@ -236,14 +236,6 @@ Some apps cache the audio device list. Try:
 
 ## Uninstalling
 
-### Homebrew
-
-```bash
-brew uninstall --cask duomic
-```
-
-### Manual
-
 ```bash
 sudo ./uninstall.sh
 # Or manually:
