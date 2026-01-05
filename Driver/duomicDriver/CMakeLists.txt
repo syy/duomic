@@ -7,13 +7,17 @@ project(duomicDriver CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# macOS deployment target and architectures
+set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
+set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build architectures for Universal Binary")
+
 # Codesign ID (leave empty for no signing)
 set(CODESIGN_ID "" CACHE STRING "Codesign ID")
 
 # Driver configuration
 set(DRIVER_NAME "duomicDriver")
 set(DRIVER_VERSION "0.1.0")
-set(DRIVER_COPYRIGHT "Copyright (c) 2024 duomic")
+set(DRIVER_COPYRIGHT "Copyright (c) 2026 Safa Yasin YILDIRIM")
 set(DRIVER_IDENTIFIER "com.duomic.driver")
 set(DRIVER_UID "D8F3E251-4B7A-4C9E-8F1D-2A3B4C5D6E7F")
 set(DRIVER_ENTRYPOINT "DuomicDriverEntryPoint")
@@ -31,11 +35,19 @@ get_filename_component(LIBASPL_SOURCE_DIR
 # Add rules for building libASPL
 set(LIBASPL_TARGET duomicDriver_libASPL)
 include(ExternalProject)
+
+# Convert semicolon-separated list to space-separated for passing to ExternalProject
+string(REPLACE ";" "$<SEMICOLON>" LIBASPL_ARCHS "${CMAKE_OSX_ARCHITECTURES}")
+
 ExternalProject_Add(${LIBASPL_TARGET}
   SOURCE_DIR ${LIBASPL_SOURCE_DIR}
   BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/libASPL-build
   INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/libASPL-prefix
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+  CMAKE_ARGS
+    -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
+  CMAKE_CACHE_ARGS
+    -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
   LOG_DOWNLOAD YES
   LOG_CONFIGURE YES
   LOG_BUILD YES

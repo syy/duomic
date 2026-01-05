@@ -1,0 +1,23 @@
+#!/bin/bash
+# Pre-installation script for duomic driver
+
+# Check macOS version
+OS_VERSION=$(sw_vers -productVersion)
+MAJOR_VERSION=$(echo "$OS_VERSION" | cut -d. -f1)
+
+if [ "$MAJOR_VERSION" -lt 12 ]; then
+    echo "Error: duomic requires macOS 12 (Monterey) or later."
+    echo "Current version: $OS_VERSION"
+    exit 1
+fi
+
+# Stop any running duomic CLI
+pkill -f "duomic" 2>/dev/null || true
+
+# Remove old driver if exists (clean install)
+OLD_DRIVER="/Library/Audio/Plug-Ins/HAL/duomicDriver.driver"
+if [ -d "$OLD_DRIVER" ]; then
+    rm -rf "$OLD_DRIVER"
+fi
+
+exit 0

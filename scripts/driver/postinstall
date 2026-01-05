@@ -1,0 +1,9 @@
+#!/bin/bash
+# Post-installation script for duomic driver
+# This runs after the driver is copied to /Library/Audio/Plug-Ins/HAL/
+
+# Restart coreaudiod to load the new driver
+# Note: This briefly interrupts audio playback (1-2 seconds)
+killall coreaudiod 2>/dev/null || true
+
+exit 0
