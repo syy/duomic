@@ -16,22 +16,6 @@ compile_commands.json
 *-build/
 *-stamp/
 
-# Swift Package Manager
-.build/
-.swiftpm/
-Package.resolved
-
-# Xcode
-*.xcodeproj/
-*.xcworkspace/
-xcuserdata/
-DerivedData/
-*.pbxuser
-*.mode1v3
-*.mode2v3
-*.perspectivev3
-*.xcuserstate
-
 # IDE
 .vscode/
 .idea/
@@ -44,5 +28,20 @@ DerivedData/
 /tmp/
 *.log
 
-# Compiled CLI binary
-CLI/duomic
+# Rust
+target/
+Cargo.lock
+*.rs.bk
+**/*.rs.bk
+
+# PKG Installer
+*.pkg
+pkg-root/
+distribution.xml
+dist/
+
+# Certificates and sensitive files
+*.cer
+*.p12
+*.certSigningRequest
+scripts/export-certs.sh

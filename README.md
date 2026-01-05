@@ -29,9 +29,9 @@ cd ../../..
 sudo ./install.sh
 
 # Build the CLI
-cd CLI
-swift build -c release
-sudo cp .build/release/duomic /usr/local/bin/
+cd cli
+cargo build --release
+sudo cp target/release/duomic /usr/local/bin/
 
 # Run
 duomic
@@ -82,7 +82,7 @@ duomic status
 
 **Components:**
 - **Driver**: AudioServerPlugin (HAL Plugin) built with [libASPL](https://github.com/gavv/libASPL)
-- **CLI**: Swift application using ArgumentParser
+- **CLI**: Rust application with TUI (ratatui + crossterm)
 - **IPC**: Unix socket for commands + shared memory (mmap) for audio data
 
 ## Technical Details
