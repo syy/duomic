@@ -110,6 +110,9 @@ public:
     uint32_t getWritePos() const {
         void* p = ptr_.load(std::memory_order_acquire);
         if (!p) return 0;
+        // Memory barrier: ensure we see all writes that happened before
+        // the CLI's Release fence when updating writePos
+        std::atomic_thread_fence(std::memory_order_acquire);
         return *static_cast<const uint32_t*>(p);
     }
 
@@ -121,13 +124,12 @@ private:
 
 static SharedAudioBuffer g_sharedBuffer;
 
-inline SInt16 ConvertToSInt16(double s) {
-    constexpr SInt16 SInt16Min = std::numeric_limits<SInt16>::min();
-    constexpr SInt16 SInt16Max = std::numeric_limits<SInt16>::max();
-    s *= (SInt16Max + 1.0);
-    return s < SInt16Min ? SInt16Min
-         : s >= SInt16Max + 1.0 ? SInt16Max
-         : SInt16(s);
+inline SInt16 ConvertToSInt16(float sample) {
+    // Clamp to [-1.0, 1.0] range first, then scale to SInt16
+    // This ensures symmetric clipping and correct conversion
+    if (sample >= 1.0f) return 32767;
+    if (sample <= -1.0f) return -32768;
+    return static_cast<SInt16>(sample * 32767.0f);
 }
 
 class DuomicIOHandler : public aspl::ControlRequestHandler, public aspl::IORequestHandler
